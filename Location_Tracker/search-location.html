@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Nearby Locations</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 500px;
+      width: 100%;
+    }
+  </style>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+    
+  <h2>Search Nearby Encrypted Locations</h2>
+
+  <label>Latitude: <input type="number" id="latitude" step="0.000001"></label>
+  <br><br>
+
+  <label>Longitude: <input type="number" id="longitude" step="0.000001"></label>
+  <br><br>
+
+  <label>Radius (km): <input type="number" id="radius" value="5"></label><br><br>
+
+  <button onclick="fillCurrentLocation()">📍 Use My Location</button>
+  <button onclick="searchNearby()">🔍 Search</button>
+
+  <p id="result"></p>
+  <ul id="locationList"></ul>
+  
+  <!-- Leaflet Map -->
+  <div id="map"></div>
+
+  <script>
+    // Initialize the Leaflet map without hardcoded location
+    var map = L.map('map').setView([20.5937, 78.9629], 5); // Centered over India
+    var marker;
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Function to set the map to the user's current location
+    function fillCurrentLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var lat = position.coords.latitude;
+          var lon = position.coords.longitude;
+
+          document.getElementById('latitude').value = lat;
+          document.getElementById('longitude').value = lon;
+
+          map.setView([lat, lon], 13);
+
+          if (!marker) {
+            marker = L.marker([lat, lon]).addTo(map);
+          } else {
+            marker.setLatLng([lat, lon]);
+          }
+
+          alert("Your location has been found!");
+        }, function(error) {
+          alert("Unable to retrieve your location. Showing default location in India.");
+          var fallbackLat = 18.5204;
+          var fallbackLon = 73.8567;
+          document.getElementById('latitude').value = fallbackLat;
+          document.getElementById('longitude').value = fallbackLon;
+          map.setView([fallbackLat, fallbackLon], 13);
+          if (!marker) {
+            marker = L.marker([fallbackLat, fallbackLon]).addTo(map);
+          } else {
+            marker.setLatLng([fallbackLat, fallbackLon]);
+          }
+        });
+      } else {
+        alert("Geolocation is not supported by this browser.");
+      }
+    }
+
+    // Search Nearby
+    function searchNearby() {
+      var latitude = parseFloat(document.getElementById('latitude').value);
+      var longitude = parseFloat(document.getElementById('longitude').value);
+      var radius = parseFloat(document.getElementById('radius').value);
+
+      L.circle([latitude, longitude], {
+        color: 'blue',
+        fillColor: '#30a7d7',
+        fillOpacity: 0.5,
+        radius: radius * 1000
+      }).addTo(map);
+      
+      map.setView([latitude, longitude], 13);
+
+      document.getElementById('result').innerHTML = "Searching nearby locations within " + radius + " km.";
+    }
+  </script>
+</body>
+</html>

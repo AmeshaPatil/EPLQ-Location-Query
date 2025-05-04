@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard - EPLQ Project</title>
+</head>
+<body>
+  <h2>Welcome to the Dashboard!</h2>
+  <p id="userEmail"></p>
+  <button id="logoutButton">Logout</button>
+
+  <script type="module">
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { app, auth } from "./firebase-config.js";  // auth is imported from firebase-config.js
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  
+    // Remove this line as auth is already imported from firebase-config.js
+    // const auth = getAuth(app);  // <-- REMOVE THIS LINE
+  
+    const userEmail = document.getElementById('userEmail');
+    const logoutButton = document.getElementById('logoutButton');
+  
+    function encryptData(data) {
+  return btoa(data); // Base64 encode
+}
+
+
+    // ✅ Show user email if logged in
+    function getUserLocation() {
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        console.log(`User Location: ${lat}, ${lon}`);
+
+        // ✅ Encrypt the location values
+        const encryptedLat = encryptData(lat.toString());
+        const encryptedLon = encryptData(lon.toString());
+
+        console.log(`Encrypted Location: ${encryptedLat}, ${encryptedLon}`);
+      },
+      (error) => {
+        console.error("Location error:", error.message);
+      }
+    );
+  } else {
+    console.error("Geolocation is not supported by your browser.");
+  }
+}
+// 👇 Call the function after user is confirmed to be logged in:
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    userEmail.textContent = `Hello, ${user.email}!`;
+    getUserLocation(); // ✅ Call this after showing email
+  } else {
+    window.location.href = "login.html";
+  }
+});
+  
+    // ✅ Logout on button click
+    logoutButton.addEventListener('click', () => {
+      signOut(auth).then(() => {
+        window.location.href = "login.html";
+      }).catch((error) => {
+        alert("Logout failed: " + error.message);
+      });
+    });
+  </script>
+  </body>
+</html>
