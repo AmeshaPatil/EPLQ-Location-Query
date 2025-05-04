@@ -1,1 +1,1 @@
-# EPLQ-Location-Query
+# EPLQ-LocationQuery
