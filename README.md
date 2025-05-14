@@ -1,24 +1,59 @@
-
 # EPLQ: Efficient Privacy-Preserving Location-Based Query on Encrypted Data
 
-## 📌 Project Summary
-EPLQ is a privacy-preserving system that allows users to perform spatial range queries (like finding nearby hospitals, ATMs, etc.) on encrypted location data without revealing their actual location. It uses predicate-only encryption and a privacy-preserving index tree to maintain efficiency and privacy.
+This project allows users to save, search, and view encrypted geographic locations securely using Firebase and AES encryption.
 
-## 👥 System Users
-- **Admin**: Upload POI/location data
-- **User**: Register, login, search encrypted location data
+## 🔒 Features
 
-## 🔐 Features
+- 📍 Save encrypted latitude and longitude
+- 🔐 AES encryption with secret key
+- 🔎 Search nearby encrypted locations by radius
+- 🌍 View locations on an interactive Leaflet map
+- 🧑‍💻 Role-based access: Admin & User
+- 🔁 Logs all user actions to Firestore (save, search, view)
+- 🔥 Firebase Auth + Realtime Database + Firestore
+- ✅ Fully client-side secured logic
+
+## 🗂 Folder Structure
+  /signup/
+├── index.html (Sign Up)
+├── login.html (Login)
+├── dashboard.html (logout)
+├── admin-dashboard.html
+├──user-dashboard.html
+
+/location-tracker/
+├── save-location.html
+├── view-location.html
+├── search-location.html
+├── map-view.html
+├── firebase.js
+├── script.js
+├── view-script.js
+├── search-script.js
+├── map-script.js
+
+
+## 🚀 How to Run
+
+1. Clone or download this repo
+2. Open `signup/index.html` in your browser
+3. Sign up or log in
+4. Use the dashboard to save or search locations
+
+> Note: You must be logged in to use location features
+
+## 🛠 Technologies Used
+
+- HTML, CSS, JavaScript
 - Firebase Authentication
-- Encrypted location data
-- Location-based query
-- Privacy-preserving search
 - Firebase Realtime Database
+- Firebase Firestore
+- CryptoJS (AES encryption)
+- Leaflet.js (Interactive Map)
+- Nominatim API (Nearby place search)
 
-## 🔧 Technologies Used
-- Firebase (Auth + Database)
-- JavaScript (Frontend + Logic)
-- HTML/CSS
-- Git & GitHub
+## 👤 Created by
 
-## 📁 Project Structure
+**Amesh Patil**  
+MCA - MIT College of Management  
+May 2025
