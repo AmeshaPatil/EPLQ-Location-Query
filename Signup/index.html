@@ -8,12 +8,16 @@
   <h2>Sign Up</h2>
 
   <form id="signup-form">
-    <input type="email" id="email" placeholder="Enter your email" required>
-    <br>
-    <br>
-    <input type="password" id="password" placeholder="Enter your password" required>
-    <br>
-    <br>
+    <input type="email" id="email" placeholder="Enter your email" required><br><br>
+    <input type="password" id="password" placeholder="Enter your password" required><br><br>
+
+    <!-- ✅ Add Role Dropdown -->
+    <label for="role">Select Role:</label>
+    <select id="role" required>
+      <option value="user">User</option>
+      <option value="admin">Admin</option>
+    </select><br><br>
+
     <button type="submit">Sign Up</button>
   </form>
 
@@ -23,34 +27,50 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
-    apiKey: "AIzaSyCVCzMJjoy6JHMEqPbeTwqyAZ0z3U4Kq-Y",
-    authDomain: "eplq-locationquery.firebaseapp.com",
-    projectId: "eplq-locationquery",
-    storageBucket: "eplq-locationquery.appspot.com",
-    messagingSenderId: "651622290281",
-    appId: "1:651622290281:web:b4efc7e8f55a0eabd7e3f8"
-  };
+      apiKey: "AIzaSyCVCzMJjoy6JHMEqPbeTwqyAZ0z3U4Kq-Y",
+      authDomain: "eplq-locationquery.firebaseapp.com",
+      projectId: "eplq-locationquery",
+      storageBucket: "eplq-locationquery.appspot.com",
+      messagingSenderId: "651622290281",
+      appId: "1:651622290281:web:b4efc7e8f55a0eabd7e3f8"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app); // ✅ initialize Firestore
 
     const form = document.getElementById('signup-form');
     const message = document.getElementById('message');
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
+      const role = document.getElementById('role').value;
 
-      createUserWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
-          message.textContent = "Signup successful!";
-        })
-        .catch((error) => {
-          message.textContent = "Error: " + error.message;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // ✅ Save role in Firestore
+        await setDoc(doc(db, "users", user.uid), {
+          email: email,
+          role: role
         });
+
+        message.textContent = `Signup successful as ${role}!`;
+
+        // Optional: Redirect to login page
+        // window.location.href = "login.html";
+
+      } catch (error) {
+        console.error("Signup error:", error);
+        message.textContent = "Error: " + error.message;
+      }
     });
   </script>
 </body>

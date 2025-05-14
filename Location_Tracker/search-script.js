@@ -1,43 +1,55 @@
-import { database } from './firebase.js';
+import { database, auth, db } from './firebase.js';
 import { ref, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-// Make sure this is the same as the one used when saving locations
+// 🔐 Your secret key for encryption/decryption
 const secretKey = "mySecretKey123";
 
-// Function to decrypt the encrypted latitude/longitude
+// 🔓 Decrypt encrypted coordinates
 function decrypt(encryptedText) {
   const bytes = CryptoJS.AES.decrypt(encryptedText, secretKey);
   return parseFloat(bytes.toString(CryptoJS.enc.Utf8));
 }
 
-// Calculate distance between two lat/lng points using Haversine formula
+// 📏 Haversine formula for distance calculation
 function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of the earth in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+    Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Expose fillCurrentLocation to window (already works with HTML button)
+// ✅ Log action to Firestore
+async function logAction(actionName) {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  await addDoc(collection(db, "logs"), {
+    action: actionName,
+    uid: user.uid,
+    email: user.email,
+    timestamp: serverTimestamp()
+  });
+}
+
+// 📍 Use My Location
 window.fillCurrentLocation = function () {
   navigator.geolocation.getCurrentPosition(
-    (position) => {
-      document.getElementById('latitude').value = position.coords.latitude;
-      document.getElementById('longitude').value = position.coords.longitude;
+    (pos) => {
+      document.getElementById('latitude').value = pos.coords.latitude;
+      document.getElementById('longitude').value = pos.coords.longitude;
     },
-    (error) => {
-      alert("Failed to get location: " + error.message);
+    (err) => {
+      alert("❌ Failed to get your location: " + err.message);
     }
   );
 };
 
-// Search nearby encrypted locations and show markers
+// 🔍 Encrypted location-based search
 window.searchNearby = async function () {
   const userLat = parseFloat(document.getElementById('latitude').value);
   const userLng = parseFloat(document.getElementById('longitude').value);
@@ -45,35 +57,28 @@ window.searchNearby = async function () {
 
   const locationList = document.getElementById('locationList');
   const result = document.getElementById('result');
-
   locationList.innerHTML = '';
-  result.textContent = '🔍 Searching nearby locations...';
+  result.textContent = '🔎 Searching encrypted locations...';
+
+  window.searchLayer.clearLayers();
+
+  const searchCircle = L.circle([userLat, userLng], {
+    color: 'blue',
+    fillColor: '#cce6ff',
+    fillOpacity: 0.4,
+    radius: radius * 1000
+  });
+  window.searchLayer.addLayer(searchCircle);
 
   try {
     const snapshot = await get(ref(database, 'locations'));
     if (!snapshot.exists()) {
-      result.textContent = '❌ No saved locations found.';
+      result.textContent = '❌ No locations found.';
       return;
     }
 
-    const data = snapshot.val();
     let count = 0;
-
-    // Clear old markers and circles from the map if any
-    if (window.searchLayer) {
-      window.searchLayer.clearLayers();
-    } else {
-      window.searchLayer = L.layerGroup().addTo(map);
-    }
-
-    // Show search radius as a blue circle
-    const searchCircle = L.circle([userLat, userLng], {
-      color: 'blue',
-      fillColor: '#cce6ff',
-      fillOpacity: 0.4,
-      radius: radius * 1000
-    });
-    window.searchLayer.addLayer(searchCircle);
+    const data = snapshot.val();
 
     Object.values(data).forEach((loc) => {
       const lat = decrypt(loc.latitude);
@@ -87,19 +92,22 @@ window.searchNearby = async function () {
         li.textContent = `📍 Latitude: ${lat.toFixed(5)}, Longitude: ${lng.toFixed(5)}, Distance: ${distance.toFixed(2)} km`;
         locationList.appendChild(li);
 
-        // Add marker to map
-        const marker = L.marker([lat, lng]).bindPopup(`📍 Distance: ${distance.toFixed(2)} km`);
+        const marker = L.marker([lat, lng]).bindPopup(`📍 ${distance.toFixed(2)} km`);
         window.searchLayer.addLayer(marker);
       }
     });
 
-    map.setView([userLat, userLng], 13);
+    window.map.setView([userLat, userLng], 13);
 
     result.textContent = count > 0
-      ? `✅ Found ${count} nearby location(s).`
+      ? `✅ Found ${count} location(s) nearby.`
       : '❌ No nearby locations found.';
+
+    // ✅ Log search action
+    await logAction("Searched encrypted locations");
+
   } catch (error) {
     console.error(error);
-    result.textContent = '❌ Error fetching locations.';
+    result.textContent = '❌ Error during encrypted search.';
   }
 };

@@ -1,52 +1,71 @@
-import { database } from './firebase.js';
+import { database, auth, db } from './firebase.js';
 import { ref, push, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-// 👉 1. Add CryptoJS for encryption (include in save-location.html):
-// <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+// Your secret encryption key
+const secretKey = "mySecretKey123";
 
-const secretKey = "mySecretKey123"; // You can change this to anything secure
-
-// 👉 2. Function to encrypt the latitude and longitude
+// Encrypt latitude and longitude
 function encryptLocation(lat, lng) {
   const encryptedLat = CryptoJS.AES.encrypt(lat.toString(), secretKey).toString();
   const encryptedLng = CryptoJS.AES.encrypt(lng.toString(), secretKey).toString();
   return { encryptedLat, encryptedLng };
 }
 
-// 👉 3. Main function to save location securely
+// 🔹 Log action to Firestore
+async function logAction(actionName) {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  await addDoc(collection(db, "logs"), {
+    action: actionName,
+    uid: user.uid,
+    email: user.email,
+    timestamp: serverTimestamp()
+  });
+}
+
+// Save current location
 window.saveMyLocation = async function () {
   const status = document.getElementById('status');
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert("You must be logged in to save a location.");
+    return;
+  }
 
   if (!navigator.geolocation) {
     status.textContent = 'Geolocation is not supported by your browser.';
     return;
   }
 
-  status.textContent = 'Getting location…';
+  status.textContent = 'Getting your location…';
 
   navigator.geolocation.getCurrentPosition(
     async (position) => {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
-
-      // Encrypt the coordinates
       const { encryptedLat, encryptedLng } = encryptLocation(lat, lng);
 
-      // Save to Firebase
       const locationRef = ref(database, 'locations');
       const newLocationRef = push(locationRef);
 
       await set(newLocationRef, {
         latitude: encryptedLat,
         longitude: encryptedLng,
+        uid: user.uid,
         timestamp: new Date().toISOString()
       });
 
-      status.textContent = 'Location successfully saved (encrypted)!';
+      status.textContent = '📍 Location saved (encrypted) successfully!';
+
+      // ✅ Log action
+      await logAction("Saved encrypted location");
     },
     (error) => {
       console.error(error);
-      status.textContent = 'Unable to retrieve your location.';
+      status.textContent = '❌ Failed to get your location.';
     }
   );
 };

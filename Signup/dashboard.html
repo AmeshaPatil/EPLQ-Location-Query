@@ -10,62 +10,78 @@
   <button id="logoutButton">Logout</button>
 
   <script type="module">
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-    import { app, auth } from "./firebase-config.js";  // auth is imported from firebase-config.js
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  
-    // Remove this line as auth is already imported from firebase-config.js
-    // const auth = getAuth(app);  // <-- REMOVE THIS LINE
-  
-    const userEmail = document.getElementById('userEmail');
+    // Firebase imports
+    import { auth } from "./firebase-config.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const db = getFirestore();
+    const userEmailElement = document.getElementById('userEmail');
     const logoutButton = document.getElementById('logoutButton');
-  
+
+    // Encrypt function
     function encryptData(data) {
-  return btoa(data); // Base64 encode
-}
+      return btoa(data); // Base64 encode
+    }
 
+    // Save encrypted location to Firestore
+    async function saveEncryptedLocation(lat, lon, email) {
+      const encryptedLat = encryptData(lat.toString());
+      const encryptedLon = encryptData(lon.toString());
 
-    // ✅ Show user email if logged in
-    function getUserLocation() {
-  if ("geolocation" in navigator) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        console.log(`User Location: ${lat}, ${lon}`);
-
-        // ✅ Encrypt the location values
-        const encryptedLat = encryptData(lat.toString());
-        const encryptedLon = encryptData(lon.toString());
-
-        console.log(`Encrypted Location: ${encryptedLat}, ${encryptedLon}`);
-      },
-      (error) => {
-        console.error("Location error:", error.message);
+      try {
+        await addDoc(collection(db, "locations"), {
+          email: email,
+          lat: encryptedLat,
+          lon: encryptedLon,
+          timestamp: new Date().toISOString()
+        });
+        console.log("Encrypted location saved to Firestore.");
+      } catch (error) {
+        console.error("Error saving location:", error);
       }
-    );
-  } else {
-    console.error("Geolocation is not supported by your browser.");
-  }
-}
-// 👇 Call the function after user is confirmed to be logged in:
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    userEmail.textContent = `Hello, ${user.email}!`;
-    getUserLocation(); // ✅ Call this after showing email
-  } else {
-    window.location.href = "login.html";
-  }
-});
-  
-    // ✅ Logout on button click
-    logoutButton.addEventListener('click', () => {
-      signOut(auth).then(() => {
+    }
+
+    // Get user location
+    function getUserLocation(email) {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            console.log(`User Location: ${lat}, ${lon}`);
+            saveEncryptedLocation(lat, lon, email);
+          },
+          (error) => {
+            console.error("Location error:", error.message);
+          }
+        );
+      } else {
+        console.error("Geolocation is not supported by your browser.");
+      }
+    }
+
+    // Check if user is logged in
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        userEmailElement.textContent = `Hello, ${user.email}!`;
+        getUserLocation(user.email);
+      } else {
         window.location.href = "login.html";
-      }).catch((error) => {
-        alert("Logout failed: " + error.message);
-      });
+      }
+    });
+
+    // Logout functionality
+    logoutButton.addEventListener('click', () => {
+      signOut(auth)
+        .then(() => {
+          window.location.href = "login.html";
+        })
+        .catch((error) => {
+          alert("Logout failed: " + error.message);
+        });
     });
   </script>
-  </body>
+</body>
 </html>
